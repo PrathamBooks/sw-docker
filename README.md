@@ -87,7 +87,7 @@ to deploy StoryWeaver on your server.
     # Make sure "gem tzinfo-data" in Gem file
     ```
 
-  - Edit spp/config/database.yml
+  - Edit sw-core/config/database.yml
     add a new line under 'default' "host: sw-postgres" in it. 
     ```
     #default looks like after edit
@@ -110,11 +110,65 @@ to deploy StoryWeaver on your server.
   
   - Clone the deployment repository
     ```
-      git clone https://github.com/PrathamBooks/sw-docker-new.git
-      cd sw-docker-new
+      git clone https://github.com/PrathamBooks/sw-docker.git
+      cd sw-docker
     ```
 
-  - Edit the 'dev-config' file and set appropriate values.(Keys are same as in deploy config)
+  - Edit the 'dev-config' file and set appropriate values. - Edit the 'config' file and set appropriate values.
+   
+    - 'USER': Set this to the username which will be used to ssh into
+      the machines (The default user for all ubuntu machines in aws is
+      'ubuntu').
+
+    - 'SSH_KEY': The path to the ssh key placed on the `nginx server`
+                 
+      _for example:_ If the private key file `id_rsa`  is placed at `/home/ubuntu/` in nginx server,
+                                  then the value should be `SSH_KEY:/home/ubuntu/id_rsa`
+    
+    - 'SHARED_DIR': Set this to a path on the machine going to run
+      rails application. This path does not have to exist as it wil be
+      automatically created on that machine. This is used by the rails
+      application to store logs and other data. For example, setting
+      it to below value will create a directory named `logs` in the
+      machine running rails and mount it inside the container. The
+      application stores logs inside this directory, which can then be
+      accessed directly from the host machine without going inside the
+      container.
+      ```
+        SHARED_DIR=/home/ubuntu/logs
+      ```
+
+    
+    - The names of the services should be set to the IP addresses of
+      the instances which should run them. An example config setup
+      will look like
+      ```
+      ELASTIC=192.168.1.110
+      SW_APP=192.168.1.121
+      NGINX=192.168.1.215
+      POSTGRES=192.168.1.12
+      COUCH=192.168.1.3
+      ```
+
+      You don't necessarily need to use individual machines for all
+      services. The multiple machine setup allows the flexibility of
+      using the same machine to run multiple services. To do this set
+      the config keys of these services to the same value. For
+      example, for a three machine setup which runs elasticsearch on
+      its own machine, nginx and rails both on another machine and
+      postgres and couchbase together on another, then their values in
+      the config would look like
+      ```
+        ELASTIC=192.168.1.1
+        SW_APP=192.168.1.2
+        NGINX=192.168.1.2
+        POSTGRES=192.168.1.3
+        COUCH=192.168.1.3
+      ```
+
+    - The other keys in the config are for using third party
+    
+    
     Difference:
      'WORKDIR' is the absolute path to the directory where 'sw-core' and 'sw-web' are cloned.
      This directory will be mounted into the rails container, so, any files put inside this
@@ -127,8 +181,12 @@ to deploy StoryWeaver on your server.
     ```
       docker exec -it <rails containerID> bash
       bash /workdir/sw-core/lib/scripts/build_script.sh
-      #update localhost to nginx ip in build script
-     ```
+      #update localhost:3000 to <nginx ip address> in build script
+    ```
+    The rails server will take some time to come up. You can check the progress by running the following.
+      ```
+        docker logs <rails container name>
+      ```
     Wait for sometime and then go to the ip address of nginx server
     
 ### Known issue
