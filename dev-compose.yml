@@ -1,0 +1,98 @@
+version: '3'
+services:
+  sw-elasticsearch:
+    image: prathambooksdocker/elasticsearch:latest
+    ports:
+      - 9200:9200
+    environment:
+      - discovery.type=single-node
+    networks:
+      - sw-network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.elasticsearch == true
+
+  sw-postgres:
+    image: prathambooksdocker/postgres:latest
+    ports:
+      - 5432:5432
+    environment:
+      - HOST=sw-app
+    volumes:
+      - /etc/storyweaver/data/:/var/lib/postgresql/data
+    networks:
+      - sw-network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.postgres == true
+
+
+  sw-couchbase:
+    image: prathambooksdocker/couchbase:latest
+    ports:
+      - 8091-8096:8091-8096
+    networks:
+      - sw-network
+    deploy:
+      placement:
+        constraints:
+          - node.labels.couchbase == true
+
+
+  sw-nginx:
+    image: prathambooksdocker/nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - HOST_IP=${NGINX}
+    networks:
+      - sw-network
+    depends_on:
+      - "sw-app"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.nginx == true
+
+
+  sw-app:
+    image: prathambooksdocker/railsdev:latest
+    ports:
+      - 3000:3000
+    volumes:
+      - ${SHARED_DIR}:/shared
+      - ${WORKDIR}:/workdir
+    environment:
+        - FACEBOOK_APP_ID=${FACEBOOK_APP_ID}
+        - FACEBOOK_SECRET_KEY=${FACEBOOK_SECRET_KEY}
+        - GOOGLE_APP_ID=${GOOGLE_APP_ID}
+        - GOOGLE_SECRET_KEY=${GOOGLE_SECRET_KEY}
+        - GA_PROPERTY_ID=${GA_PROPERTY_ID}
+        - GOOGLE_TRANSLATE_APP_ID=${GOOGLE_TRANSLATE_APP_ID}
+        - MAILCHIMP_LIST_ID=${MAILCHIMP_LIST_ID}
+        - MAILCHIMP_API_KEY=${MAILCHIMP_API_KEY}
+        - GOOGLE_STORAGE_ACCESS_KEY_ID=${GOOGLE_STORAGE_ACCESS_KEY_ID}
+        - GOOGLE_STORAGE_SECRET_ACCESS_KEY=${GOOGLE_STORAGE_SECRET_ACCESS_KEY}
+        - NEWRELIC_API_KEY=${NEWRELIC_API_KEY}
+        - NEWRELIC_NAME=${NEWRELIC_NAME}
+        - MAILER_USER=${MAILER_USER}
+        - MAILER_PASSWORD=${MAILER_PASSWORD}
+        - MAILER_DOMAIN=${MAILER_DOMAIN}
+    networks:
+      - sw-network
+    depends_on:
+      - "sw-postgres"
+      - "sw-elasticsearch"
+      - "sw-couchbase"
+    deploy:
+      placement:
+        constraints:
+          - node.labels.app == true
+
+
+networks:
+  sw-network:
+    driver: overlay
